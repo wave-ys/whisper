@@ -2,7 +2,8 @@ import argparse
 import os
 import traceback
 import warnings
-from typing import TYPE_CHECKING, Optional, Tuple, Union
+
+from typing import TYPE_CHECKING, Optional, Tuple, Union, Callable
 
 import numpy as np
 import torch
@@ -48,6 +49,7 @@ def transcribe(
     word_timestamps: bool = False,
     prepend_punctuations: str = "\"'“¿([{-",
     append_punctuations: str = "\"'.。,，!！?？:：”)]}、",
+    on_progress: Callable[[list, list, int, int], None] = None,
     **decode_options,
 ):
     """
@@ -101,6 +103,10 @@ def transcribe(
 
     decode_options: dict
         Keyword arguments to construct `DecodingOptions` instances
+
+    on_progress: Callable[[list, list, int, int]]
+        Will be invoked when progress changed, having this signature:
+        on_progress(all_segments, current_segments, total_progress, current_progress)
 
     Returns
     -------
@@ -373,6 +379,9 @@ def transcribe(
 
             # update progress bar
             pbar.update(min(content_frames, seek) - previous_seek)
+
+            if on_progress is not None:
+                on_progress(all_segments, current_segments, content_frames, min(content_frames, seek))
 
     return dict(
         text=tokenizer.decode(all_tokens[len(initial_prompt_tokens) :]),
